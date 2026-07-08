@@ -1,18 +1,5 @@
-
-
 import os
 import subprocess
-
-try:
-    import readline
-    # macOS 的 libedit 在处理中文输入时有退格问题，这四行修复它
-    readline.parse_and_bind('set bind-tty-special-chars off')
-    readline.parse_and_bind('set input-meta on')
-    readline.parse_and_bind('set output-meta on')
-    readline.parse_and_bind('set convert-meta off')
-except ImportError:
-    pass
-
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
@@ -26,7 +13,6 @@ MODEL = os.environ["MODEL_ID"]
 
 SYSTEM = f"You are a coding agent at {os.getcwd()}. Use bash to solve tasks. Act, don't explain." # os.getcwd() 获取当前工作目录, 用于在系统提示中显示当前目录
 
-# ── Tool definition: just bash ────────────────────────────
 '''
 bash 工具定义,"type": "object" 表示输入参数是一个对象, 包含一个属性command, 类型为字符串
 '''
@@ -40,8 +26,6 @@ TOOLS = [{
     },
 }]
 
-
-# ── Tool execution ────────────────────────────────────────
 def run_bash(command: str) -> str:
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"] # 防止执行危险命令, 如删除所有文件、重启系统等操作
     if any(d in command for d in dangerous): # d in command for d in dangerous 它会遍历 dangerous 列表中的每个元素 d，检查 d 是否在 command 字符串中。
@@ -57,7 +41,6 @@ def run_bash(command: str) -> str:
         return f"Error: {e}"
 
 
-# ── The core pattern: a while loop that calls tools until the model stops ──
 def agent_loop(messages: list):
     while True:
         response = client.messages.create(
@@ -65,10 +48,8 @@ def agent_loop(messages: list):
             tools=TOOLS, max_tokens=8000,
         )
 
-        # Append assistant turn
         messages.append({"role": "assistant", "content": response.content})
 
-        # If the model didn't call a tool, we're done
         if response.stop_reason != "tool_use":
             return
 
@@ -85,13 +66,11 @@ def agent_loop(messages: list):
                     "content": output,
                 })
 
-        # Feed tool results back, loop continues
         messages.append({"role": "user", "content": results})
 
 
-# ── Entry point ──────────────────────────────────────────
 if __name__ == "__main__":
-    print("s01: Agent Loop")
+    print("s01_Loop")
     print("输入问题，回车发送。输入 q 退出。\n")
 
     history = []
@@ -104,7 +83,6 @@ if __name__ == "__main__":
             break
         history.append({"role": "user", "content": query})
         agent_loop(history)
-        # Print the model's final text response
         response_content = history[-1]["content"] # 获取模型的最新回复内容
         if isinstance(response_content, list): # 检查 response_content 是否为列表类型
             for block in response_content:
